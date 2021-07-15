@@ -10,6 +10,7 @@ clear; close all
 load('heatmodel.mat')       % load LTI operators
 d = size(A,1);
 B = eye(d);                 % makes Pinf better conditioned than default B
+% B(1:10,1:10) = diag(1000*ones(10,1));
 C = zeros(5,197);           % makes for slightly slower GEV decay than default C
 C(1:5,10:10:50) = eye(5);
 d_out = size(C,1);
@@ -45,7 +46,7 @@ Q_fish = L_fish*L_fish';
 %% compute posterior quantities and errors
 % compute Spantini posterior covariance
 r_vals = 1:50;
-[Gpos_sp, tau2] = spantini_poscov(L_fish,L_pr,r_vals,'svd');
+[Gpos_sp, tau2, P_sp] = spantini_poscov(L_fish,L_pr,r_vals,'svd');
 [mu_LR, del2] = lowrankmean(y,G_full,sig_obs,L_pr,r_vals);
 
 % compute BT posterior covariance
@@ -61,7 +62,7 @@ for rr = 1:length(r_vals)
     f_dist(rr,2) = forstner(Gpos_BT(:,:,rr),Gpos_BT(:,:,end));
     temp(rr) = sum(log(1./(1+tau2)).^2) - sum(log(1./(1+tau2(1:r))).^2);
     
-    mu_LRU(:,rr) = Gpos_sp(:,:,rr)*full_rhs;
+    mu_LRU(:,rr) = Gpos_sp(:,:,rr)*P_sp(:,:,rr)'*full_rhs;
     Gr = getGH(obs_times,BTinfo.Cr(:,1:r),BTinfo.Ar(1:r,1:r),sig_obs);
     mu_BT(:,rr) = Gpos_BT(:,:,rr)*BTinfo.Sr(:,1:r)*Gr'*(y/sig_obs^2);
 end
@@ -114,4 +115,4 @@ semilogy(hankel,'k'); hold on; semilogy(sqrt(tau2))
 legend({'HSVs','$\delta_i$ Spantini'},'interpreter','latex','fontsize',14)
 legend boxoff
 savePDF('figs/c1_hankel_decay',[5 4],[0 0])
-xlim([0 25])
+xlim([0 50])

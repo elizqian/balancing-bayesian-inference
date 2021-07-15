@@ -31,18 +31,21 @@ switch method
             What(:,i) = What(:,i) / sqrt(What(:,i)'*prec*What(:,i));
         end
         del2 = diag(D(a,a));
-        Vhat = prec*What;
     case 'svd'
         % low rank SVD calc
         [myV,myS,myW] = svd(LH'*L_pr);
         What = L_pr*myW;
-        Vhat = prec*What;
+        
         del2 = diag(myS).^2;
         info.V = myV;
         info.S = myS;
         info.W = myW;
         
         
+end
+Wtilde = prec*What;
+for i = 1:d     % normalize
+    Wtilde(:,i) = Wtilde(:,i) / sqrt(Wtilde(:,i)'*Gamma_pr*Wtilde(:,i));
 end
 
 % compute low-rank updates for all specified ranks in r_vals
@@ -51,5 +54,5 @@ for rr = 1:length(r_vals)
     KKT = What(:,1:r)*diag(del2(1:r)./(1+del2(1:r)))*What(:,1:r)';
     Gpos(:,:,rr) = Gamma_pr - KKT;
     % Compute projector
-    Pi(:,:,rr) = Vhat(:,1:rr)*What(:,1:rr)';
+    Pi(:,:,rr) = What(:,1:rr)*eye(r)*Wtilde(:,1:rr)';
 end
