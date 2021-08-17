@@ -16,7 +16,7 @@ L_fish = lyapchol(A',C'/sig_obs)';
 Q_fish = L_fish*L_fish';
 
 % final time
-T_vals = [10 50 100 500 1000];
+T_vals = [10 50 100 500];
 dt_vals = [1 0.1 0.01 0.001];
 [forst,fro,compatH] = deal(zeros(length(T_vals),length(dt_vals)));
 for tt = 1:length(T_vals)

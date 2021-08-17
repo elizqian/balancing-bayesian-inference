@@ -6,7 +6,8 @@ else
 end
 
 d = size(A,1);
-[Ar,~,Cr,Sr,~,hankel] = reduceLTI(d,A,B,C,L,R);
+rmax = min(d,size(L,2));
+[Ar,~,Cr,Sr,~,hankel] = reduceLTI(rmax,A,B,C,L,R);
 Gamma_pr = R*R';
 
 prec = inv(Gamma_pr);

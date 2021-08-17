@@ -33,7 +33,11 @@ switch method
         del2 = diag(D(a,a));
     case 'svd'
         % low rank SVD calc
-        [myV,myS,myW] = svd(LH'*L_pr);
+        if size(LH,2) <= 10000
+            [myV,myS,myW] = svd(LH'*L_pr);
+        else
+            [myV,myS,myW] = svds(LH'*L_pr,d);
+        end
         What = L_pr*myW;
         
         del2 = diag(myS).^2;

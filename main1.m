@@ -18,7 +18,7 @@ d_out = size(C,1);
 
 % define measurement times and noise
 n       = 100;
-dt_obs  = 10;       % making this bigger makes Spantini eigvals decay faster
+dt_obs  = 1;       % making this bigger makes Spantini eigvals decay faster
 obs_times = dt_obs:dt_obs:n*dt_obs;
 sig_obs = 0.04;
 
@@ -58,11 +58,11 @@ What = L_pr*W;
 Wtilde = Gamma_pr\What;
 
 % balancing transformation and balanced ops
-[V,S,W] = svd(L_Q'*L_pr);       % differs from above in use of Chol factor of infinite Gramian
+[V,S,W] = svd(L_Q(:,1:rmax)'*L_pr(:,1:rmax));       % differs from above in use of Chol factor of infinite Gramian
 del     = diag(S);
 Siginvsqrt = S^-0.5;
-Sr      = (Siginvsqrt*V'*L_Q')';
-Tr      = L_pr*W*Siginvsqrt;
+Sr      = (Siginvsqrt*V'*L_Q(:,1:rmax)')';
+Tr      = L_pr(:,1:rmax)*W*Siginvsqrt;
 A_BT    = Sr'*A*Tr;
 C_BT    = C*Tr;
 
@@ -113,6 +113,7 @@ legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
 title('Posterior covariance approximation error','interpreter','latex','fontsize',16)
+savePDF('figs/m1_covs',[5 4],[0 0])
 
 % plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;
@@ -129,6 +130,7 @@ legend({'Spantini low-rank mean','Balanced truncation','Spantini low-rank update
     'location','best')
 title('Posterior mean approximation error','interpreter','latex','fontsize',16)
 legend boxoff
+savePDF('figs/m1_means',[5 4],[0 0])
 
 figure(3); clf
 semilogy(tau,'+'); hold on
@@ -137,6 +139,7 @@ legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-
 legend boxoff
 title('Generalized eigenvalues','interpreter','latex','fontsize',16)
 xlim([0 rmax])
+savePDF('figs/m1_eigs',[5 4],[0 0])
 
 function nm = forstner(A,B)
     sig = eig(A,B);
