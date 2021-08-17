@@ -1,9 +1,9 @@
 % compares posterior covariances for:
-% - Spantini update using (H, P_inf^-1) pencil
-% - BT approx using (H, P_inf^-1) to define model and H_BT, G_BT to 
-%   define posterior approx
+% 1 - Spantini update using (H, P_inf^-1) pencil
+% 2 - BT approx using (H, P_inf^-1) 
 %
-% all BT models end up unstable this way
+% BT models for r close to r_max end up unstable; Serkan says he can fix
+% it?
 
 clear; close all
 
@@ -114,14 +114,13 @@ stable'
 % plot posterior covariance Forstner errors
 figure(1); clf
 semilogy(r_vals,f_dist(:,1)); hold on
-semilogy(r_vals,f_dist(:,2),'o')
-legend({'Spantini low-rank update','Balanced truncation'},...
+semilogy(r_vals,f_dist(:,2),'x','Color',[0.9290    0.6940    0.1250])
+legend({'Spantini low-rank update','BT with H'},...
     'interpreter','latex','fontsize',14)
 legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
 title('Posterior covariance approximation error','interpreter','latex','fontsize',16)
-savePDF('figs/m2_covs',[5 4],[0 0])
 
 % plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;
@@ -130,24 +129,22 @@ err_BT = mu_BT - mupos_true;
 
 figure(2); clf
 semilogy(r_vals,sqrt(sum(err_LR.^2))/norm(mupos_true)); hold on
-semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true))
-semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true))
+semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true),'Color',[0.9290    0.6940    0.1250])
+semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true),'Color',[0.4940    0.1840    0.5560])
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('$\ell^2$-error','interpreter','latex','fontsize',14)
-legend({'Spantini low-rank mean','Balanced truncation','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
+legend({'Spantini low-rank mean','BT with H','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
     'location','best')
 title('Posterior mean approximation error','interpreter','latex','fontsize',16)
 legend boxoff
-savePDF('figs/m2_means',[5 4],[0 0])
 
 figure(3); clf
 semilogy(tau,'+'); hold on
-semilogy(del,'o')
+semilogy(del,'x','Color',[0.9290    0.6940    0.1250])
 legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(H,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
 legend boxoff
-title('Generalized eigenvalues','interpreter','latex','fontsize',16)
+title('Hankel singular values/sqrt Spantini GEVs','interpreter','latex','fontsize',16)
 xlim([0 rmax])
-savePDF('figs/m2_eigs',[5 4],[0 0])
 
 function nm = forstner(A,B)
     sig = eig(A,B);

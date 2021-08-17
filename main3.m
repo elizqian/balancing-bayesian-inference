@@ -1,10 +1,10 @@
 % compares posterior covariances for:
-% - Spantini update using (H, P_inf^-1) pencil
-% - BT approx using (Q_inf, P_inf^-1) to define model but H_BT, G_BT to 
-%   define posterior approx
+% 1 - Spantini update using (H, P_inf^-1) pencil
+% 2 - BT approx using (Q_inf, P_inf^-1) 
+% 3 - BT approx using (H, P_inf^-1)
 %
-% if H is very low rank then BT looks bad in comparison. Can mess with obs
-% times to make H more/less rank deficient.
+% BT models using H for r close to r_max end up unstable; Serkan says he 
+% can fix it?
 
 clear; close all
 
@@ -57,28 +57,29 @@ tau = diag(S);
 What = L_pr*W;
 Wtilde = Gamma_pr\What;
 
-% balancing transformation and balanced ops
+% balancing with Q_infty
 [V,S,W] = svd(L_Q(:,1:rmax)'*L_pr(:,1:rmax));       % differs from above in use of Chol factor of infinite Gramian
-del     = diag(S);
+del1     = diag(S);
 Siginvsqrt = S^-0.5;
 Sr      = (Siginvsqrt*V'*L_Q(:,1:rmax)')';
 Tr      = L_pr(:,1:rmax)*W*Siginvsqrt;
-A_BT    = Sr'*A*Tr;
-C_BT    = C*Tr;
+A_BTQ    = Sr'*A*Tr;
+C_BTQ    = C*Tr;
 
+% balancing with H
 R = qr(G/sig_obs); % compute a square root factorization of H
 LG = R';
 [V,S,W] = svd(LG(:,1:rmax)'*L_pr(:,1:rmax));     
-del     = diag(S);
+del2     = diag(S);
 Siginvsqrt = S^-0.5;
 Sr2      = (Siginvsqrt*V'*LG(:,1:rmax)')';
 Tr2      = L_pr(:,1:rmax)*W*Siginvsqrt;
-A_BT2    = Sr2'*A*Tr2;
-C_BT2    = C*Tr2;
+A_BTH    = Sr2'*A*Tr2;
+C_BTH    = C*Tr2;
 
-% compute Forstner distances and class2 means
+% compute posterior approximations
 f_dist = zeros(length(r_vals),3);
-[mu_LRU, mu_LR, mu_BT, mu_BT2] = deal(zeros(d,length(r_vals)));
+[mu_LRU, mu_LR, mu_BTQ, mu_BTH] = deal(zeros(d,length(r_vals)));
 for rr = 1:length(r_vals)
     r = r_vals(rr);
     
@@ -92,42 +93,37 @@ for rr = 1:length(r_vals)
     mu_LRU(:,rr) = Gpos_sp*full_rhs;
     mu_LR(:,rr)  = Gpos_sp*Pi_r'*full_rhs;
     
-    % generate G_BT, H_BT
-    G_BT = zeros(n*d_out,r);
-    iter = expm(A_BT(1:r,1:r)*dt_obs);
-    temp = C_BT(:,1:r);
+    % Balancing with Q_infty - generate G_BT,H_BT
+    G_BTQ = zeros(n*d_out,r);
+    iter = expm(A_BTQ(1:r,1:r)*dt_obs);
+    temp = C_BTQ(:,1:r);
     for i = 1:n
         temp = temp*iter;
-        G_BT((i-1)*d_out+1:i*d_out,:) = temp;
+        G_BTQ((i-1)*d_out+1:i*d_out,:) = temp;
     end
-    G_BT = G_BT*Sr(:,1:r)';
-    H_BT = G_BT'*G_BT/sig_obs^2;
+    G_BTQ = G_BTQ*Sr(:,1:r)';
+    H_BTQ = G_BTQ'*G_BTQ/sig_obs^2;
 
-    % BT approx posterior covariance
-    Gpos_BT = inv(H_BT+ prec_pr);
-    f_dist(rr,2) = forstner(Gpos_BT,Gpos_true);
+    % Balancing with Q_infty - compute posterior covariance and mean
+    Gpos_BTQ = inv(H_BTQ+ prec_pr);
+    f_dist(rr,2) = forstner(Gpos_BTQ,Gpos_true);
+    mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y/sig_obs^2);
     
-    % BT approx posterior mean
-    mu_BT(:,rr) = Gpos_BT*G_BT'*(y/sig_obs^2);
-    
-    % BT 2
-    % generate G_BT, H_BT
-    G_BT2 = zeros(n*d_out,r);
-    iter = expm(A_BT2(1:r,1:r)*dt_obs);
-    temp = C_BT2(:,1:r);
+    % Balancing with H - generate G_BT, H_BT
+    G_BTH = zeros(n*d_out,r);
+    iter = expm(A_BTH(1:r,1:r)*dt_obs);
+    temp = C_BTH(:,1:r);
     for i = 1:n
         temp = temp*iter;
-        G_BT2((i-1)*d_out+1:i*d_out,:) = temp;
+        G_BTH((i-1)*d_out+1:i*d_out,:) = temp;
     end
-    G_BT2 = G_BT2*Sr2(:,1:r)';
-    H_BT2 = G_BT2'*G_BT2/sig_obs^2;
+    G_BTH = G_BTH*Sr2(:,1:r)';
+    H_BTH = G_BTH'*G_BTH/sig_obs^2;
 
-    % BT approx posterior covariance
-    Gpos_BT2 = inv(H_BT2+ prec_pr);
+    % Balancing with H - compute posterior covariance and mean
+    Gpos_BT2 = inv(H_BTH+ prec_pr);
     f_dist(rr,3) = forstner(Gpos_BT2,Gpos_true);
-    
-    % BT approx posterior mean
-    mu_BT2(:,rr) = Gpos_BT2*G_BT2'*(y/sig_obs^2);
+    mu_BTH(:,rr) = Gpos_BT2*G_BTH'*(y/sig_obs^2);
 end
 
 %% plots
@@ -142,36 +138,34 @@ legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
 title(['Posterior covariance: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
-savePDF(['figs/comp_covs',num2str(dt_obs)],[5 4],[0 0])
 
 % plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;
 err_LR = mu_LR - mupos_true;
-err_BT = mu_BT - mupos_true;
-err_BT2 = mu_BT2 - mupos_true;
+err_BT = mu_BTQ - mupos_true;
+err_BT2 = mu_BTH - mupos_true;
 
 figure(2); clf
 semilogy(r_vals,sqrt(sum(err_LR.^2))/norm(mupos_true)); hold on
 semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true))
-semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true))
 semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true))
+semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true))
 ylim([1e-5 1e1])
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('$\ell^2$-error','interpreter','latex','fontsize',14)
-legend({'Spantini low-rank mean','BT with Q','Spantini low-rank update mean','BT with H'},'interpreter','latex','fontsize',14,...
+legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
     'location','best')
 title(['Posterior means: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
-savePDF(['figs/comp_means_',num2str(dt_obs)],[5 4],[0 0])
 
-% figure(3); clf
-% semilogy(tau,'+'); hold on
-% semilogy(del,'o')
-% legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
-% legend boxoff
-% title('Generalized eigenvalues','interpreter','latex','fontsize',16)
-% xlim([0 rmax])
-% savePDF(['figs/m1_eigs',[5 4],[0 0])
+figure(3); clf
+semilogy(tau,'+'); hold on
+semilogy(del1,'o')
+semilogy(del2,'x')
+legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-1})$','Balancing: $(H,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
+legend boxoff
+title('Hankel singular values/sqrt of Spantini GEVs','interpreter','latex','fontsize',16)
+xlim([0 rmax])
 
 function nm = forstner(A,B)
     sig = eig(A,B);
