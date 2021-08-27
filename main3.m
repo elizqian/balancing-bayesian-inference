@@ -9,7 +9,7 @@
 clear; close all
 
 %% setup
-model = 'iss1R'; % heat, CD, beam, build, iss1R, iss12A
+model = 'CD'; % heat, CD, beam, build, iss1R, iss12A
 
 switch model
     case 'heat'
@@ -71,6 +71,9 @@ r_vals = 1:50;
 rmax = max(r_vals);
 
 % spantini computation as described in Remark 4
+% R = qr(G/sig_obs); % compute a square root factorization of H
+% LG = R';
+% [V,S,W] = svd(LG'*L_pr);
 [~,S,W] = svd(G*L_pr/sig_obs);    
 tau = diag(S);
 What = L_pr*W;
@@ -128,7 +131,6 @@ for rr = 1:length(r_vals)
     H_BTQ = G_BTQ'*G_BTQ/sig_obs^2;
 
     % Balancing with Q_infty - compute posterior covariance and mean
-%     Gpos_BTQ = inv(H_BTQ+ prec_pr);
     Gpos_BTQ = eye(d)/(H_BTQ+ prec_pr);
     f_dist(rr,2) = forstner(Gpos_BTQ,Gpos_true);
     mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y/sig_obs^2);
@@ -145,7 +147,6 @@ for rr = 1:length(r_vals)
     H_BTH = G_BTH'*G_BTH/sig_obs^2;
 
     % Balancing with H - compute posterior covariance and mean
-%     Gpos_BT2 = inv(H_BTH+ prec_pr);
     Gpos_BT2 = eye(d)/(H_BTH+ prec_pr);
     f_dist(rr,3) = forstner(Gpos_BT2,Gpos_true);
     mu_BTH(:,rr) = Gpos_BT2*G_BTH'*(y/sig_obs^2);
