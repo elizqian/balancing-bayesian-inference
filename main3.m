@@ -9,11 +9,30 @@
 clear; close all
 
 %% setup
-load('heatmodel.mat')       % load LTI operators
-d = size(A,1);
-B = eye(d);                 % makes Pinf better conditioned than default B
-C = zeros(5,197);           % makes for slightly slower GEV decay than default C
-C(1:5,10:10:50) = eye(5);
+model = 'iss1R'; % heat, CD, beam, build, iss1R, iss12A
+
+switch model
+    case 'heat'
+        load('heatmodel.mat')       % load LTI operators
+        d = size(A,1);
+        B = eye(d);                 % makes Pinf better conditioned than default B
+        C = zeros(5,d);           % makes for slightly slower GEV decay than default C
+        C(1:5,10:10:50) = eye(5);
+    case 'CD'
+        load('CDplayer.mat')
+        d = size(A,1);
+    case 'beam'
+        load('beam.mat')
+        d = size(A,1);
+        B = eye(d);
+    case 'iss1R'
+        load('iss1R.mat')
+        d = size(A,1);
+    case 'build'
+        load('build.mat')
+        d = size(A,1);
+end
+
 d_out = size(C,1);
 
 % define measurement times and noise
@@ -43,9 +62,9 @@ x0 = L_pr*randn(d,1);
 y = G*x0 + sig_obs*randn(n*d_out,1);
 
 full_rhs    = G'*(y/sig_obs^2);
-prec_pr     = inv(Gamma_pr);
-Gpos_true   = inv(H + prec_pr);
-mupos_true  = Gpos_true*full_rhs;
+prec_pr     = eye(d)/(Gamma_pr);
+Gpos_true = eye(d)/(H + prec_pr);
+mupos_true = (H + prec_pr)\full_rhs;
 
 %% compute posterior approximations and errors
 r_vals = 1:50;
@@ -58,24 +77,28 @@ What = L_pr*W;
 Wtilde = Gamma_pr\What;
 
 % balancing with Q_infty
-[V,S,W] = svd(L_Q(:,1:rmax)'*L_pr(:,1:rmax));       % differs from above in use of Chol factor of infinite Gramian
-del1     = diag(S);
+[V,S,W] = svd(L_Q'*L_pr);       % differs from above in use of Chol factor of infinite Gramian
+S = S(1:rmax,1:rmax);
+delQ     = diag(S);
 Siginvsqrt = S^-0.5;
-Sr      = (Siginvsqrt*V'*L_Q(:,1:rmax)')';
-Tr      = L_pr(:,1:rmax)*W*Siginvsqrt;
+Sr      = (Siginvsqrt*V(:,1:rmax)'*L_Q')';
+Tr      = L_pr*W(:,1:rmax)*Siginvsqrt;
 A_BTQ    = Sr'*A*Tr;
 C_BTQ    = C*Tr;
 
 % balancing with H
 R = qr(G/sig_obs); % compute a square root factorization of H
 LG = R';
-[V,S,W] = svd(LG(:,1:rmax)'*L_pr(:,1:rmax));     
-del2     = diag(S);
+[V,S,W] = svd(LG'*L_pr);
+V = V(:,1:rmax);
+W = W(:,1:rmax);
+S = S(1:rmax,1:rmax);
+delH     = diag(S);
 Siginvsqrt = S^-0.5;
-Sr2      = (Siginvsqrt*V'*LG(:,1:rmax)')';
-Tr2      = L_pr(:,1:rmax)*W*Siginvsqrt;
-A_BTH    = Sr2'*A*Tr2;
-C_BTH    = C*Tr2;
+SrH      = (Siginvsqrt*V(:,1:rmax)'*LG')';
+TrH      = L_pr*W(:,1:rmax)*Siginvsqrt;
+A_BTH    = SrH'*A*TrH;
+C_BTH    = C*TrH;
 
 % compute posterior approximations
 f_dist = zeros(length(r_vals),3);
@@ -105,7 +128,8 @@ for rr = 1:length(r_vals)
     H_BTQ = G_BTQ'*G_BTQ/sig_obs^2;
 
     % Balancing with Q_infty - compute posterior covariance and mean
-    Gpos_BTQ = inv(H_BTQ+ prec_pr);
+%     Gpos_BTQ = inv(H_BTQ+ prec_pr);
+    Gpos_BTQ = eye(d)/(H_BTQ+ prec_pr);
     f_dist(rr,2) = forstner(Gpos_BTQ,Gpos_true);
     mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y/sig_obs^2);
     
@@ -117,11 +141,12 @@ for rr = 1:length(r_vals)
         temp = temp*iter;
         G_BTH((i-1)*d_out+1:i*d_out,:) = temp;
     end
-    G_BTH = G_BTH*Sr2(:,1:r)';
+    G_BTH = G_BTH*SrH(:,1:r)';
     H_BTH = G_BTH'*G_BTH/sig_obs^2;
 
     % Balancing with H - compute posterior covariance and mean
-    Gpos_BT2 = inv(H_BTH+ prec_pr);
+%     Gpos_BT2 = inv(H_BTH+ prec_pr);
+    Gpos_BT2 = eye(d)/(H_BTH+ prec_pr);
     f_dist(rr,3) = forstner(Gpos_BT2,Gpos_true);
     mu_BTH(:,rr) = Gpos_BT2*G_BTH'*(y/sig_obs^2);
 end
@@ -133,11 +158,12 @@ semilogy(r_vals,f_dist(:,1)); hold on
 semilogy(r_vals,f_dist(:,2),'o')
 semilogy(r_vals,f_dist(:,3),'x')
 legend({'Spantini low-rank update','BT with Q','BT with H'},...
-    'interpreter','latex','fontsize',14)
+    'interpreter','latex','fontsize',14,'location','best')
 legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
 title(['Posterior covariance: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
+savePDF([model,'_cov'],[5 4],[0 0])
 
 % plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;
@@ -157,17 +183,19 @@ legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank upda
     'location','best')
 title(['Posterior means: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
+savePDF([model,'_means'],[5 4],[0 0])
 
 figure(3); clf
 semilogy(tau,'+'); hold on
-semilogy(del1,'o')
-semilogy(del2,'x')
+semilogy(delQ,'o')
+semilogy(delH,'x')
 legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-1})$','Balancing: $(H,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
 legend boxoff
 title('Hankel singular values/sqrt of Spantini GEVs','interpreter','latex','fontsize',16)
 xlim([0 rmax])
+savePDF([model,'_gev'],[5 4],[0 0])
 
 function nm = forstner(A,B)
-    sig = eig(A,B);
+    sig = eig(A,B,'chol');
     nm = sum(log(sig).^2);
 end
