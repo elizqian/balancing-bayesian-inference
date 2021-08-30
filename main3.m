@@ -7,7 +7,7 @@
 clear; close all
 
 %% setup
-model = 'heat'; % heat, CD, beam, build, iss1R, iss12A
+model = 'heat'; % heat, CD, beam, build, iss1R
 
 switch model
     case 'heat'
@@ -82,19 +82,15 @@ Wtilde = L_pr'\W;
 
 %% balancing with Q_infty
 [V,S,W] = svd(L_Q'*L_pr); 
-
-% differs from above in use of Chol factor of infinite Gramian
 S = S(1:rmax,1:rmax);
 delQ     = diag(S);
 Siginvsqrt=diag(1./sqrt(delQ));
-
-%%
 Sr      = (Siginvsqrt*V(:,1:rmax)'*L_Q')';
 Tr      = L_pr*W(:,1:rmax)*Siginvsqrt;
 A_BTQ    = Sr'*A*Tr;
 C_BTQ    = C*Tr;
 
-% balancing with H
+%% balancing with H
 R = qr(G/sig_obs); % compute a square root factorization of H
 LG = R';
 [V,S,W] = svd(LG'*L_pr);
@@ -102,16 +98,13 @@ V = V(:,1:rmax);
 W = W(:,1:rmax);
 S = S(1:rmax,1:rmax);
 delH     = diag(S);
-
 Siginvsqrt=diag(1./sqrt(delH));
-
-%%
 SrH      = (Siginvsqrt*V(:,1:rmax)'*LG')';
 TrH      = L_pr*W(:,1:rmax)*Siginvsqrt;
 A_BTH    = SrH'*A*TrH;
 C_BTH    = C*TrH;
 
-% compute posterior approximations
+%% compute posterior approximations
 f_dist = zeros(length(r_vals),4);
 [mu_LRU, mu_LR, mu_BTQ, mu_BTH] = deal(zeros(d,length(r_vals)));
 for rr = 1:length(r_vals)
@@ -206,7 +199,7 @@ semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true))
 semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true))
 ylim([1e-5 1e1])
 xlabel('$r$','interpreter','latex','fontsize',14)
-ylabel('$\ell^2$-error','interpreter','latex','fontsize',14)
+ylabel('Relative $\ell^2$-error','interpreter','latex','fontsize',14)
 legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
     'location','best')
 title(['Posterior means: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
