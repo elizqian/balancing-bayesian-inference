@@ -92,6 +92,7 @@ C_BTQ    = C*Tr;
 
 %% balancing with H
 R = qr(G/sig_obs); % compute a square root factorization of H
+R=triu(R(1:d,:));  % extract upper triangular part of R
 LG = R';
 [V,S,W] = svd(LG'*L_pr);
 V = V(:,1:rmax);
