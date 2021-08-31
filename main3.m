@@ -55,6 +55,9 @@ for i = 1:n
 end
 H = G'*G/sig_obs^2;
 
+QHerr = norm(Q_inf-dt_obs*H,'fro')/norm(Q_inf,'fro');
+disp(['dt*H - Q: ',num2str(QHerr)])
+
 %% draw random IC and generate measurements, compute true posterior
 x0 = L_pr*randn(d,1);
 y = G*x0 + sig_obs*randn(n*d_out,1);
@@ -91,8 +94,7 @@ A_BTQ    = Sr'*A*Tr;
 C_BTQ    = C*Tr;
 
 %% balancing with H
-R = qr(G/sig_obs); % compute a square root factorization of H
-R=triu(R(1:d,:));  % extract upper triangular part of R
+[~,R] = qr(G/sig_obs); % compute a square root factorization of H
 LG = R';
 [V,S,W] = svd(LG'*L_pr);
 V = V(:,1:rmax);
@@ -184,8 +186,8 @@ legend({'Spantini low-rank update','BT with Q','BT with H'},...
 legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
-title(['Posterior covariance: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
-savePDF(['figs/',model,'_cov'],[5 4],[0 0])
+title(['Posterior covariance: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
+savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_cov'],[5 4],[0 0])
 
 % plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;
@@ -203,16 +205,17 @@ xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Relative $\ell^2$-error','interpreter','latex','fontsize',14)
 legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
     'location','best')
-title(['Posterior means: $\Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
+title(['Posterior means: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
-savePDF(['figs/',model,'_means'],[5 4],[0 0])
+savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_means'],[5 4],[0 0])
 
 figure(3); clf
 semilogy(tau,'+'); hold on
 semilogy(delQ,'o')
 semilogy(delH,'x')
+xlabel(['$\|\Delta t\cdot H - Q_\infty\|_F / \|Q_\infty\|_F = ',num2str(QHerr),'$'],'fontsize',14,'interpreter','latex')
 legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-1})$','Balancing: $(H,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
 legend boxoff
 title('Hankel singular values/sqrt of Spantini GEVs','interpreter','latex','fontsize',16)
 xlim([0 rmax])
-savePDF(['figs/',model,'_gev'],[5 4],[0 0])
+savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_gev'],[5 4],[0 0])
