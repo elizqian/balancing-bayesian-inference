@@ -1,8 +1,7 @@
-% compares posterior covariances for:
+% compares posterior covariances and means for:
 % 1 - Spantini update using (H, P_inf^-1) pencil
 % 2 - BT approx using (Q_inf, P_inf^-1) 
 % 3 - BT approx using (H, P_inf^-1)
-%
 
 clear; close all
 
@@ -14,7 +13,7 @@ switch model
         load('heatmodel.mat')       % load LTI operators
         d = size(A,1);
         B = eye(d);                 % makes Pinf better conditioned than default B
-        C = zeros(5,d);           % makes for slightly slower GEV decay than default C
+        C = zeros(5,d);             % makes for slightly slower GEV decay than default C
         C(1:5,10:10:50) = eye(5);
     case 'CD'
         load('CDplayer.mat')
@@ -34,8 +33,9 @@ end
 d_out = size(C,1);
 
 % define measurement times and noise
-n       = 100;
+T       = 10;
 dt_obs  = 0.1;       % making this bigger makes Spantini eigvals decay faster
+n       = T/dt_obs;
 obs_times = dt_obs:dt_obs:n*dt_obs;
 sig_obs = 0.04;
 
