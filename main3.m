@@ -33,9 +33,9 @@ end
 d_out = size(C,1);
 
 % define measurement times and noise
-T       = 10;
-dt_obs  = 0.1;       % making this bigger makes Spantini eigvals decay faster
-n       = T/dt_obs;
+T       = 33;
+dt_obs  = 01;       % making this bigger makes Spantini eigvals decay faster
+n       = round(T/dt_obs);
 obs_times = dt_obs:dt_obs:n*dt_obs;
 sig_obs = 0.04;
 
@@ -67,7 +67,7 @@ full_rhs    = G'*(y/sig_obs^2);
 L_prinv=inv(L_pr); 
 prec_pr =L_prinv'*L_prinv;      % Is prec_pr necessary ? 
  
-R_posinv=qr([G/sig_obs; L_prinv]);
+R_posinv=qr([G/sig_obs; L_prinv],0);
 R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
 R_pos_true=inv(R_posinv);
 Gpos_true=R_pos_true*R_pos_true';
@@ -77,11 +77,20 @@ mupos_true = R_posinv\(R_posinv'\full_rhs);
 r_vals = 1:48;
 rmax = max(r_vals);
 
-% spantini computation as described in Remark 4
-[~,S,W] = svd(G*L_pr/sig_obs);    
+% (H,Gamma_pr^-1) computations
+[~,R] = qr(G/sig_obs,0); % compute a square root factorization of H
+LG = R';
+[V,S,W] = svd(LG'*L_pr,0);
 tau = diag(S);
-What = L_pr*W;
+What = L_pr*W;      % spantini directions
 Wtilde = L_pr'\W;
+S = S(1:rmax,1:rmax);   
+delH     = diag(S);
+Siginvsqrt=diag(1./sqrt(delH));
+SrH      = (Siginvsqrt*V(:,1:rmax)'*LG')';
+TrH      = L_pr*W(:,1:rmax)*Siginvsqrt;
+A_BTH    = SrH'*A*TrH;
+C_BTH    = C*TrH;
 
 %% balancing with Q_infty
 [V,S,W] = svd(L_Q'*L_pr); 
@@ -92,20 +101,6 @@ Sr      = (Siginvsqrt*V(:,1:rmax)'*L_Q')';
 Tr      = L_pr*W(:,1:rmax)*Siginvsqrt;
 A_BTQ    = Sr'*A*Tr;
 C_BTQ    = C*Tr;
-
-%% balancing with H
-[~,R] = qr(G/sig_obs); % compute a square root factorization of H
-LG = R';
-[V,S,W] = svd(LG'*L_pr);
-V = V(:,1:rmax);
-W = W(:,1:rmax);
-S = S(1:rmax,1:rmax);
-delH     = diag(S);
-Siginvsqrt=diag(1./sqrt(delH));
-SrH      = (Siginvsqrt*V(:,1:rmax)'*LG')';
-TrH      = L_pr*W(:,1:rmax)*Siginvsqrt;
-A_BTH    = SrH'*A*TrH;
-C_BTH    = C*TrH;
 
 %% compute posterior approximations
 f_dist = zeros(length(r_vals),4);
@@ -138,7 +133,7 @@ for rr = 1:length(r_vals)
     H_BTQ = G_BTQ'*G_BTQ/sig_obs^2;
 
     % Balancing with Q_infty - compute posterior covariance and mean
-    R_posinv=qr([G_BTQ/sig_obs; L_prinv]);
+    R_posinv=qr([G_BTQ/sig_obs; L_prinv],0);
     R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
     R_pos_BTQ=inv(R_posinv);
     Gpos_BTQ=R_pos_BTQ*R_pos_BTQ';
@@ -158,7 +153,7 @@ for rr = 1:length(r_vals)
     H_BTH = G_BTH'*G_BTH/sig_obs^2;
 
     % Balancing with H - compute posterior covariance and mean
-    R_posinv=qr([G_BTH/sig_obs; L_prinv]);
+    R_posinv=qr([G_BTH/sig_obs; L_prinv],0);
     R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
     R_pos_BTH=inv(R_posinv);
     Gpos_BTH=R_pos_BTH*R_pos_BTH';
@@ -181,7 +176,7 @@ semilogy(r_vals,f_dist(:,1)); hold on
 semilogy(r_vals,f_dist(:,2),'o')
 semilogy(r_vals,f_dist(:,3),'x')
 semilogy(r_vals,f_dist(:,4),'k:')
-legend({'Spantini low-rank update','BT with Q','BT with H'},...
+legend({'Spantini low-rank update','BT with Q','BT with H','Theoretical optimum'},...
     'interpreter','latex','fontsize',14,'location','best')
 legend boxoff
 xlabel('$r$','interpreter','latex','fontsize',14)
@@ -208,14 +203,3 @@ legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank upda
 title(['Posterior means: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
 savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_means'],[5 4],[0 0])
-
-figure(3); clf
-semilogy(tau,'+'); hold on
-semilogy(delQ,'o')
-semilogy(delH,'x')
-xlabel(['$\|\Delta t\cdot H - Q_\infty\|_F / \|Q_\infty\|_F = ',num2str(QHerr),'$'],'fontsize',14,'interpreter','latex')
-legend({'Spantini: $(H,\Gamma_{pr}^{-1})$','Balancing: $(Q_\infty,\Gamma_{pr}^{-1})$','Balancing: $(H,\Gamma_{pr}^{-1})$'},'interpreter','latex','fontsize',14)
-legend boxoff
-title('Hankel singular values/sqrt of Spantini GEVs','interpreter','latex','fontsize',16)
-xlim([0 rmax])
-savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_gev'],[5 4],[0 0])
