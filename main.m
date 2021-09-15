@@ -6,9 +6,13 @@
 clear; close all
 
 %% setup
-model = 'heat'; % heat, CD, beam, build, iss1R
+model = 'iss1R'; % heat, CD, beam, build, iss1R
 
 switch model
+    case 'heat2'
+        load('heat-cont.mat');
+        d = size(A,1);
+        B = eye(d);
     case 'heat'
         load('heatmodel.mat')       % load LTI operators
         d = size(A,1);
@@ -33,17 +37,15 @@ end
 d_out = size(C,1);
 
 % define measurement times and noise
-T       = 33;
-dt_obs  = 01;       % making this bigger makes Spantini eigvals decay faster
+T       = 300;
+dt_obs  = 0.1;       % making this bigger makes Spantini eigvals decay faster
 n       = round(T/dt_obs);
 obs_times = dt_obs:dt_obs:n*dt_obs;
-sig_obs = 0.04;
+scl_sig_obs = 0.1;   % relative noise scaling
 
-% compute Gramians
+% compute compatible prior
 L_pr = lyapchol(A,B)';  
 Gamma_pr = L_pr*L_pr';
-L_Q = lyapchol(A',C'/sig_obs)';
-Q_inf = L_Q*L_Q';
 
 % define full forward model and Fisher info
 G = zeros(n*d_out,d);
@@ -53,21 +55,36 @@ for i = 1:n
     temp = temp*iter;
     G((i-1)*d_out+1:i*d_out,:) = temp;
 end
-H = G'*G/sig_obs^2;
-
-QHerr = norm(Q_inf-dt_obs*H,'fro')/norm(Q_inf,'fro');
-disp(['dt*H - Q: ',num2str(QHerr)])
 
 %% draw random IC and generate measurements, compute true posterior
 x0 = L_pr*randn(d,1);
-y = G*x0 + sig_obs*randn(n*d_out,1);
+y = G*x0;
+sig_obs = scl_sig_obs*max(abs(reshape(y,d_out,n)),[],2);
+F = C./sig_obs;
+sig_obs_long = repmat(sig_obs,n,1);
+m = y + sig_obs_long.*randn(n*d_out,1);
+Go = G./sig_obs_long;
 
-full_rhs    = G'*(y/sig_obs^2);
+figure(10);
+for i = 1:d_out
+    subplot(d_out,1,i)
+    plot(obs_times,y(i:d_out:end),'Color',getColor(1)); hold on
+    plot(obs_times,m(i:d_out:end),'Color',[getColor(1) 0.2])
+end
+
+% compute Obs Gramian and Fisher info
+L_Q = lyapchol(A',F')';
+Q_inf = L_Q*L_Q';
+H = Go'*Go;
+QHerr = norm(Q_inf-dt_obs*H,'fro')/norm(Q_inf,'fro');
+disp(['dt*H - Q: ',num2str(QHerr)])
+
+full_rhs    = G'*(y./(sig_obs_long.^2));
 
 L_prinv=inv(L_pr); 
 prec_pr =L_prinv'*L_prinv;      % Is prec_pr necessary ? 
  
-R_posinv=qr([G/sig_obs; L_prinv],0);
+R_posinv=qr([Go; L_prinv],0);
 R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
 R_pos_true=inv(R_posinv);
 Gpos_true=R_pos_true*R_pos_true';
@@ -78,7 +95,7 @@ r_vals = 1:48;
 rmax = max(r_vals);
 
 % (H,Gamma_pr^-1) computations
-[~,R] = qr(G/sig_obs,0); % compute a square root factorization of H
+[~,R] = qr(Go,0); % compute a square root factorization of H
 LG = R';
 [V,S,W] = svd(LG'*L_pr,0);
 tau = diag(S);
@@ -130,16 +147,17 @@ for rr = 1:length(r_vals)
         G_BTQ((i-1)*d_out+1:i*d_out,:) = temp;
     end
     G_BTQ = G_BTQ*Sr(:,1:r)';
-    H_BTQ = G_BTQ'*G_BTQ/sig_obs^2;
+    G_BTQo = G_BTQ./sig_obs_long;
+    H_BTQ = G_BTQo'*G_BTQo;
 
     % Balancing with Q_infty - compute posterior covariance and mean
-    R_posinv=qr([G_BTQ/sig_obs; L_prinv],0);
+    R_posinv=qr([G_BTQo; L_prinv],0);
     R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
     R_pos_BTQ=inv(R_posinv);
     Gpos_BTQ=R_pos_BTQ*R_pos_BTQ';
     
     f_dist(rr,2) = forstner(R_pos_BTQ,R_pos_true,'sqrt');
-    mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y/sig_obs^2);
+    mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y./(sig_obs_long.^2));
     
     % Balancing with H - generate G_BT, H_BT
     G_BTH = zeros(n*d_out,r);
@@ -150,16 +168,17 @@ for rr = 1:length(r_vals)
         G_BTH((i-1)*d_out+1:i*d_out,:) = temp;
     end
     G_BTH = G_BTH*SrH(:,1:r)';
-    H_BTH = G_BTH'*G_BTH/sig_obs^2;
+    G_BTHo = G_BTH./sig_obs_long;
+    H_BTH = G_BTHo'*G_BTHo;
 
     % Balancing with H - compute posterior covariance and mean
-    R_posinv=qr([G_BTH/sig_obs; L_prinv],0);
+    R_posinv=qr([G_BTHo; L_prinv],0);
     R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
     R_pos_BTH=inv(R_posinv);
     Gpos_BTH=R_pos_BTH*R_pos_BTH';
        
     f_dist(rr,3) = forstner(R_pos_BTH,R_pos_true,'sqrt');
-    mu_BTH(:,rr) = Gpos_BTH*G_BTH'*(y/sig_obs^2);
+    mu_BTH(:,rr) = Gpos_BTH*G_BTH'*(y./(sig_obs_long.^2));
 end
 
 %% plots
@@ -203,3 +222,10 @@ legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank upda
 title(['Posterior means: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
 savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_means'],[5 4],[0 0])
+
+figure(3); clf
+for i = 1:d_out
+    subplot(d_out,1,i);
+    plot(G(i:d_out:end,:)*x0); hold on
+% %     plot(y(i:d_out:end),'Color',[getColor(1) 0.2])
+end
