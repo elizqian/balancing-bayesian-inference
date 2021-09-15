@@ -1,83 +1,6 @@
-% compares posterior covariances and means for:
-% 1 - Spantini update using (H, P_inf^-1) pencil
-% 2 - BT approx using (Q_inf, P_inf^-1) 
-% 3 - BT approx using (H, P_inf^-1)
-
 clear; close all
 
-%% setup
-model = 'iss1R'; % heat, CD, beam, build, iss1R
-
-switch model
-    case 'heat2'
-        load('heat-cont.mat');
-        d = size(A,1);
-        B = eye(d);
-    case 'heat'
-        load('heatmodel.mat')       % load LTI operators
-        d = size(A,1);
-        B = eye(d);                 % makes Pinf better conditioned than default B
-        C = zeros(5,d);             % makes for slightly slower GEV decay than default C
-        C(1:5,10:10:50) = eye(5);
-    case 'CD'
-        load('CDplayer.mat')
-        d = size(A,1);
-    case 'beam'
-        load('beam.mat')
-        d = size(A,1);
-        B = eye(d);
-    case 'iss1R'
-        load('iss1R.mat')
-        d = size(A,1);
-    case 'build'
-        load('build.mat')
-        d = size(A,1);
-end
-
-d_out = size(C,1);
-
-% define measurement times and noise
-T       = 300;
-dt_obs  = 0.1;       % making this bigger makes Spantini eigvals decay faster
-n       = round(T/dt_obs);
-obs_times = dt_obs:dt_obs:n*dt_obs;
-scl_sig_obs = 0.1;   % relative noise scaling
-
-% compute compatible prior
-L_pr = lyapchol(A,B)';  
-Gamma_pr = L_pr*L_pr';
-
-% define full forward model and Fisher info
-G = zeros(n*d_out,d);
-iter = expm(A*dt_obs);
-temp = C;
-for i = 1:n
-    temp = temp*iter;
-    G((i-1)*d_out+1:i*d_out,:) = temp;
-end
-
-%% draw random IC and generate measurements, compute true posterior
-x0 = L_pr*randn(d,1);
-y = G*x0;
-sig_obs = scl_sig_obs*max(abs(reshape(y,d_out,n)),[],2);
-F = C./sig_obs;
-sig_obs_long = repmat(sig_obs,n,1);
-m = y + sig_obs_long.*randn(n*d_out,1);
-Go = G./sig_obs_long;
-
-figure(10);
-for i = 1:d_out
-    subplot(d_out,1,i)
-    plot(obs_times,y(i:d_out:end),'Color',getColor(1)); hold on
-    plot(obs_times,m(i:d_out:end),'Color',[getColor(1) 0.2])
-end
-
-% compute Obs Gramian and Fisher info
-L_Q = lyapchol(A',F')';
-Q_inf = L_Q*L_Q';
-H = Go'*Go;
-QHerr = norm(Q_inf-dt_obs*H,'fro')/norm(Q_inf,'fro');
-disp(['dt*H - Q: ',num2str(QHerr)])
+setup
 
 full_rhs    = G'*(y./(sig_obs_long.^2));
 
@@ -129,7 +52,6 @@ for rr = 1:length(r_vals)
     Rpos_sp = What*diag(sqrt([1./(1+tau(1:r).^2); ones(d-r,1)]));
     Gpos_sp=What*diag([1./(1+tau(1:r).^2); ones(d-r,1)])*What';
 
-%%
     f_dist(rr,1) = forstner(Rpos_sp,R_pos_true,'sqrt');
     f_dist(rr,4) = sum(log(1./(1+tau(r+1:end).^2)).^2);
     
@@ -190,7 +112,7 @@ end
    f_dist=real(f_dist);
  
 % plot posterior covariance Forstner errors
-figure(1); clf
+figure(11); clf
 semilogy(r_vals,f_dist(:,1)); hold on
 semilogy(r_vals,f_dist(:,2),'o')
 semilogy(r_vals,f_dist(:,3),'x')
@@ -209,7 +131,7 @@ err_LR = mu_LR - mupos_true;
 err_BT = mu_BTQ - mupos_true;
 err_BT2 = mu_BTH - mupos_true;
 
-figure(2); clf
+figure(12); clf
 semilogy(r_vals,sqrt(sum(err_LR.^2))/norm(mupos_true)); hold on
 semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true))
 semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true))
@@ -222,10 +144,3 @@ legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank upda
 title(['Posterior means: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
 savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_means'],[5 4],[0 0])
-
-figure(3); clf
-for i = 1:d_out
-    subplot(d_out,1,i);
-    plot(G(i:d_out:end,:)*x0); hold on
-% %     plot(y(i:d_out:end),'Color',[getColor(1) 0.2])
-end
