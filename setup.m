@@ -3,13 +3,14 @@
 % this setup is shared between main and plotting scripts
 
 %% load matrix operators for LIT model
-model = 'ISS1R'; % heat, CD, beam, build, iss1R
+model = 'heat2'; % heat, CD, beam, build, iss1R
 
 switch model
     case 'heat2'
         load('heat-cont.mat');
         d = size(A,1);
         B = eye(d);
+        sig_obs = 0.008;
     case 'heat'
         load('heatmodel.mat')       % load LTI operators
         d = size(A,1);
@@ -26,6 +27,7 @@ switch model
     case 'ISS1R'
         load('iss1R.mat')
         d = size(A,1);
+        sig_obs = [2.5e-3 5e-4 5e-4]';
     case 'build'
         load('build.mat')
         d = size(A,1);
@@ -35,8 +37,8 @@ d_out = size(C,1);
 
 %% define inference problem
 % define observation model (measurement times and noise scaling)
-T       = 300;
-dt_obs  = 0.1;       % making this bigger makes Spantini eigvals decay faster
+T       = 1;
+dt_obs  = 0.05;       % making this bigger makes Spantini eigvals decay faster
 n       = round(T/dt_obs);
 obs_times = dt_obs:dt_obs:n*dt_obs;
 scl_sig_obs = 0.1;   % relative noise scaling
@@ -57,7 +59,9 @@ end
 % draw random IC and generate measurements
 x0 = L_pr*randn(d,1);
 y = G*x0;
-sig_obs = scl_sig_obs*max(abs(reshape(y,d_out,n)),[],2);
+if ~exist('sig_obs','var')
+    sig_obs = scl_sig_obs*max(abs(reshape(y,d_out,n)),[],2);
+end
 sig_obs_long = repmat(sig_obs,n,1);
 m = y + sig_obs_long.*randn(n*d_out,1);
 

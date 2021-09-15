@@ -2,10 +2,10 @@ clear; close all
 
 setup
 
+%% compute true posterior
 full_rhs    = G'*(y./(sig_obs_long.^2));
 
 L_prinv=inv(L_pr); 
-prec_pr =L_prinv'*L_prinv;      % Is prec_pr necessary ? 
  
 R_posinv=qr([Go; L_prinv],0);
 R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
@@ -14,7 +14,7 @@ Gpos_true=R_pos_true*R_pos_true';
 mupos_true = R_posinv\(R_posinv'\full_rhs);
 
 %% compute posterior approximations and errors
-r_vals = 1:48;
+r_vals = 1:20;
 rmax = max(r_vals);
 
 % (H,Gamma_pr^-1) computations
@@ -48,7 +48,7 @@ f_dist = zeros(length(r_vals),4);
 for rr = 1:length(r_vals)
     r = r_vals(rr);
     
-% Spantini approx posterior covariance
+    % Spantini approx posterior covariance
     Rpos_sp = What*diag(sqrt([1./(1+tau(1:r).^2); ones(d-r,1)]));
     Gpos_sp=What*diag([1./(1+tau(1:r).^2); ones(d-r,1)])*What';
 
@@ -120,6 +120,7 @@ semilogy(r_vals,f_dist(:,4),'k:')
 legend({'Spantini low-rank update','BT with Q','BT with H','Theoretical optimum'},...
     'interpreter','latex','fontsize',14,'location','best')
 legend boxoff
+grid on
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Error in F\"orstner metric','interpreter','latex','fontsize',14)
 title(['Posterior covariance: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
@@ -133,14 +134,24 @@ err_BT2 = mu_BTH - mupos_true;
 
 figure(12); clf
 semilogy(r_vals,sqrt(sum(err_LR.^2))/norm(mupos_true)); hold on
-semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true))
-semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true))
+semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true),'o')
+semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true),'x')
 semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true))
-ylim([1e-5 1e1])
+ylim([1e-13 1e1])
 xlabel('$r$','interpreter','latex','fontsize',14)
 ylabel('Relative $\ell^2$-error','interpreter','latex','fontsize',14)
 legend({'Spantini low-rank mean','BT with Q','BT with H','Spantini low-rank update mean'},'interpreter','latex','fontsize',14,...
     'location','best')
 title(['Posterior means: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
 legend boxoff
+grid on
 savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_means'],[5 4],[0 0])
+
+figure(13); clf
+semilogy(r_vals,delH); hold on
+semilogy(r_vals,delQ)
+grid on
+title(['Hankel singular values: $T = ',num2str(n*dt_obs),', \Delta t = ',num2str(dt_obs),'$'],'interpreter','latex','fontsize',16)
+legend({'$(H,\Gamma_{\rm pr}^{-1})$','$(Q,\Gamma_{\rm pr}^{-1})$'},'interpreter','latex','fontsize',14)
+legend boxoff
+savePDF(['figs/',model,'_T',num2str(n*dt_obs),'_dt',num2str(dt_obs),'_hsvs'],[5 4],[0 0])
