@@ -1,48 +1,85 @@
-load('heatmodel.mat')       % load LTI operators
-d = size(A,1);
-B = eye(d);                 % makes Pinf better conditioned than default B
-C = zeros(5,197);           % makes for slightly slower GEV decay than default C
-C(1:5,10:10:50) = eye(5);
+% sets up inference problem for the initial condition of the LTI system
+% 
+% this setup is shared between main and plotting scripts
+
+%% load matrix operators for LIT model
+model = 'heat2'; % heat, CD, beam, build, iss1R
+
+switch model
+    case 'heat2'
+        load('heat-cont.mat');
+        d = size(A,1);
+        B = eye(d);
+        sig_obs = 0.008;
+    case 'heat'
+        load('heatmodel.mat')       % load LTI operators
+        d = size(A,1);
+        B = eye(d);                 % makes Pinf better conditioned than default B
+        C = zeros(5,d);             % makes for slightly slower GEV decay than default C
+        C(1:5,10:10:50) = eye(5);
+    case 'CD'
+        load('CDplayer.mat')
+        d = size(A,1);
+    case 'beam'
+        load('beam.mat')
+        d = size(A,1);
+        B = eye(d);
+    case 'ISS1R'
+        load('iss1R.mat')
+        d = size(A,1);
+        sig_obs = [2.5e-3 5e-4 5e-4]';
+    case 'build'
+        load('build.mat')
+        d = size(A,1);
+end
+
 d_out = size(C,1);
 
-% define time for Euler
-dt = 10;
-T = 600;                
-t = 0:dt:T;
+%% define inference problem
+% define observation model (measurement times and noise scaling)
+T       = 50;
+dt_obs  = 1e-4;       % making this bigger makes Spantini eigvals decay faster
+n       = round(T/dt_obs);
+obs_times = dt_obs:dt_obs:n*dt_obs;
+scl_sig_obs = 0.1;   % relative noise scaling
 
-%  define observation times and noise
-num_obs = length(t)-1;
-k = (length(t)-1)/num_obs;
-obs_inds = k+1:k:length(t);
-obs_times = t(k+1:k:end);
-sig_obs = 0.04;
-
-% compute compatible prior using A, B
-L_pr = lyapchol(A,B)';
+% compute compatible prior
+L_pr = lyapchol(A,B)';  
 Gamma_pr = L_pr*L_pr';
 
-% draw initial condition and evolve, plot
+% define full forward model 
+G = zeros(n*d_out,d);
+iter = expm(A*dt_obs);
+temp = C;
+for i = 1:n
+    temp = temp*iter;
+    G((i-1)*d_out+1:i*d_out,:) = temp;
+end
+
+% draw random IC and generate measurements
 x0 = L_pr*randn(d,1);
-x = backwardEuler(x0,t,A);
-
-figure; 
-plot(x(:,1)); hold on
-for i = 1:num_obs
-    plot(x(:,(i)*k+1),'Color',i/(num_obs+1)*[0.85 0.325 0.098]); hold on
+y = G*x0;
+if ~exist('sig_obs','var')
+    sig_obs = scl_sig_obs*max(abs(reshape(y,d_out,n)),[],2);
 end
-title('Setup: true solution','fontsize',18)
-legend('true x_0','later observation times','location','best','fontsize',16)
+sig_obs_long = repmat(sig_obs,n,1);
+m = y + sig_obs_long.*randn(n*d_out,1);
 
-% plot true output and measured output at observation times
-% get G_euler, G_exact
-[G,H] = getGH(obs_times,C,A,sig_obs);
-y = G*x(:,1) + sig_obs*randn(d_out*num_obs,1);
-comp = G*x(:,1);
-figure; 
-for i = 1:5
-plot(obs_times, C(i,:)*x(:,obs_inds),'Color',getColor(i)); hold on
-plot(obs_times,y(i:d_out:end),'+','Color',getColor(i))
+F = C./sig_obs;
+Go = G./sig_obs_long;
+
+% compute Obs Gramian and Fisher info
+L_Q = lyapchol(A',F')';
+Q_inf = L_Q*L_Q';
+H = Go'*Go;
+
+figure(1); clf
+for i = 1:d_out
+    subplot(d_out,1,i)
+    plot(obs_times,y(i:d_out:end),'Color',getColor(1),'linewidth',1); hold on
+    plot(obs_times,m(i:d_out:end),'Color',[getColor(1) 0.1],'linewidth',2)
+    ylabel(['output ',num2str(i)],'interpreter','latex')
 end
-xlabel('t')
-title('Setup: true and measured outputs','fontsize',18)
-legend('True output','measured output','location','best')
+legend({'True output','Measurements'},'interpreter','latex','location','southeast'); legend boxoff
+xlabel('$t$','interpreter','latex')
+sgtitle([model, ' model: true/measured outputs'],'interpreter','latex','FontSize',16)

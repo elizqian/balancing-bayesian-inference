@@ -7,7 +7,7 @@ setup
 rmax = 20;
 
 % final time
-T_vals = 10;
+T_vals = 50;
 dt_vals = [.1 1e-2 1e-3 1e-4];
 [forst,fro] = deal(zeros(length(T_vals),length(dt_vals)));
 [angle1,angle2,HSVH,HSVQ] = deal(zeros(length(T_vals),length(dt_vals),rmax));

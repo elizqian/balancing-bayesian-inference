@@ -2,51 +2,13 @@
 
 clear; close all
 
-%% setup
-% model: heat, CD, beam, build, iss1R
-model = 'iss1R';
+setup
 
-switch model
-    case 'heat'
-        load('heatmodel.mat')       % load LTI operators
-        d = size(A,1);
-        B = eye(d);                 % makes Pinf better conditioned than default B
-        C = zeros(5,d);           % makes for slightly slower GEV decay than default C
-        C(1:5,10:10:50) = eye(5);
-    case 'CD'
-        load('CDplayer.mat')
-        d = size(A,1);
-    case 'beam'
-        load('beam.mat')
-        d = size(A,1);
-        B = eye(d);
-    case 'iss1R'
-        load('iss1R.mat')
-        d = size(A,1);
-    case 'build'
-        load('build.mat')
-        d = size(A,1);
-end
-d_out = size(C,1);
-
-eigA = eig(full(A));
-temp = 1/min(abs(real(eigA)));
-ct = round(temp)    % characteristic time
-
-% noise level
-sig_obs = 0.04;
-
-% compute Gramians
-L_pr = lyapchol(A,B)';
-Gamma_pr = L_pr*L_pr';
-L_Q = lyapchol(A',C'/sig_obs)';
-Q_inf = L_Q*L_Q';
-
-rmax = 40;
+rmax = 30;
 
 % final time
-T_vals = [0.5 1 2]*ct;
-dt_vals = [1 .1 1e-2];
+T_vals = [1 10 50];
+dt_vals = [1e-2 1e-3 1e-4];
 [forst,fro] = deal(zeros(length(T_vals),length(dt_vals)));
 [angle1,angle2,HSVH,HSVQ] = deal(zeros(length(T_vals),length(dt_vals),rmax));
 for tt = 1:length(T_vals)
@@ -76,7 +38,7 @@ for tt = 1:length(T_vals)
         r = min(rmax,size(S,1));
         delH     = diag(S(1:r,1:r));
         Siginvsqrt=diag(1./sqrt(delH));
-        %SrH      = (Siginvsqrt*V(:,1:rmax)'*G/sig_obs)';  Use this version of SrH if Line 72 is used
+%         SrH      = (Siginvsqrt*V(:,1:rmax)'*G/sig_obs)';  Use this version of SrH if Line 72 is used
         SrH      = (Siginvsqrt*V(:,1:rmax)'*LG')';
         TrH      = L_pr*W(:,1:r)*Siginvsqrt;
         HSVH(tt,nn,1:r) = delH/delH(1);
@@ -125,7 +87,7 @@ legend(str,'interpreter','latex','fontsize',16,'location','best'); legend boxoff
 figure(2); clf
 for i = 1:length(T_vals)
     for j = 1:length(dt_vals)
-        subplot(length(T_vals),length(dt_vals),(j-1)*length(T_vals)+i)
+        subplot(length(dt_vals),length(T_vals),(j-1)*length(T_vals)+i)
         plot(squeeze(angle1(i,j,:)))
         hold on
         plot(squeeze(angle2(i,j,:)),':')
@@ -141,14 +103,14 @@ end
 legend('H v Q','BT H v BT Q','location','best')
 sgtitle('$Q$ vs $H$ subspace angle','interpreter','latex','fontsize',18)
 %savePDF(['figs/',model,'_angles'],[6 5],[0 0])
-
+%%
 % HSVs
 ymin = min([min(HSVH,[],'all'), min(HSVQ,[],'all')]);
 ymax = max([max(HSVH,[],'all'), max(HSVQ,[],'all')]);
 figure(3); clf
 for i = 1:length(T_vals)
     for j = 1:length(dt_vals)
-        subplot(length(T_vals),length(dt_vals),(j-1)*length(T_vals)+i)
+        subplot(length(dt_vals),length(T_vals),(j-1)*length(T_vals)+i)
         semilogy(squeeze(HSVH(i,j,:)),'x'); hold on;
         semilogy(squeeze(HSVQ(i,j,:)),'o')
         ylim([ymin ymax])

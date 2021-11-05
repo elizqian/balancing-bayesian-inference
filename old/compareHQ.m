@@ -4,9 +4,12 @@ clear; close all
 
 %% setup
 % model: heat, CD, beam, build, iss1R
-model = 'heat';
+model = 'heat2';
 
 switch model
+    case 'heat2'
+        load('heat-cont.mat');
+        d = size(A,1);
     case 'heat'
         load('heatmodel.mat')       % load LTI operators
         d = size(A,1);
