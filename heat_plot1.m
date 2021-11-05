@@ -116,7 +116,7 @@ figure(11); clf
 semilogy(r_vals,f_dist(:,1)); hold on
 semilogy(r_vals,f_dist(:,2),'o')
 semilogy(r_vals,f_dist(:,3),'x')
-legend({'Spantini','BT-Q','BT-H'},...
+legend({'OLRU','BT-Q','BT-H'},...
     'interpreter','latex','fontsize',18,'location','best')
 legend boxoff
 grid on
@@ -138,7 +138,7 @@ semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true),'o','Color',getColor(2))
 semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true),'x','Color',getColor(3))
 ylim([1e-10 1e0])
 xlabel('$r$','interpreter','latex','fontsize',18)
-legend({'Spantini LR','Spantini LRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
+legend({'OLR','OLRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
     'location','southwest')
 title(['Relative $\ell^2$ posterior mean error'],'interpreter','latex','fontsize',20)
 legend boxoff
@@ -165,7 +165,7 @@ semilogy(r_vals,posnorm(:,2)/posnormref,'Color',[0.4940    0.1840    0.5560]);
 semilogy(r_vals,posnorm(:,3)/posnormref,'o','Color',getColor(2))
 semilogy(r_vals,posnorm(:,4)/posnormref,'x','Color',getColor(3))
 xlabel('$r$','interpreter','latex','fontsize',18)
-legend({'Spantini LR','Spantini LRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
+legend({'OLR','OLRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
     'location','northeast')
 title(['Relative $\Gamma_{\rm pos}^{-1}$-norm posterior mean error'],'interpreter','latex','fontsize',20)
 legend boxoff
@@ -178,7 +178,7 @@ figure(13); clf
 semilogy(r_vals,delQ/delQ(1),'o','Color',[0.8500    0.3250    0.0980]); hold on
 semilogy(r_vals,delH/delH(1),'x','Color',[0.9290    0.6940    0.1250]); hold on
 grid on
-title(['(Approximate) Hankel singular values'],...
+title(['Hankel singular values'],...
    'interpreter','latex','fontsize',20)
 legend({'$\delta_i$','$\tau_i$'},'interpreter','latex','fontsize',18,'location','southwest')
 legend boxoff
