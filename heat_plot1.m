@@ -123,7 +123,7 @@ grid on
 xlabel('$r$','interpreter','latex','fontsize',18)
 title(['F\"orstner posterior covariance error'],'interpreter','latex','fontsize',20)
 set(gca,'fontsize',16,'ticklabelinterpreter','latex')
-savePDF(['paper/',model,'_cov'],[4.5 4],[0 0])
+savePDF(['paper/',model,'_cov1'],[4.5 4],[0 0])
 
 %% plot posterior mean errors
 err_LRU = mu_LRU - mupos_true;

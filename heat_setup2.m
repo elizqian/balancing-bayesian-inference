@@ -5,33 +5,10 @@
 %% load matrix operators for LIT model
 model = 'heat2'; % heat, CD, beam, build, iss1R
 
-switch model
-    case 'heat2'
-        load('heat-cont.mat');
-        d = size(A,1);
-        B = eye(d);
-        sig_obs = 0.008;
-    case 'heat'
-        load('heatmodel.mat')       % load LTI operators
-        d = size(A,1);
-        B = eye(d);                 % makes Pinf better conditioned than default B
-        C = zeros(5,d);             % makes for slightly slower GEV decay than default C
-        C(1:5,10:10:50) = eye(5);
-    case 'CD'
-        load('CDplayer.mat')
-        d = size(A,1);
-    case 'beam'
-        load('beam.mat')
-        d = size(A,1);
-        B = eye(d);
-    case 'ISS1R'
-        load('iss1R.mat')
-        d = size(A,1);
-        sig_obs = [2.5e-3 5e-4 5e-4]';
-    case 'build'
-        load('build.mat')
-        d = size(A,1);
-end
+load('models/heat-cont.mat');
+d = size(A,1);
+B = eye(d);
+sig_obs = 0.008;
 
 d_out = size(C,1);
 
