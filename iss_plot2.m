@@ -2,8 +2,15 @@ clear; close all
 
 iss_setup2
 
+% generate random data from multiple initial conditions and measurements
+num_reps = 100;
+x0_all = L_pr*randn(d,num_reps);
+y_all  = G*x0_all;
+m_all  = y_all + sig_obs_long.*randn(n*d_out,num_reps);
+
 %% compute true posterior
 full_rhs    = G'*(y./(sig_obs_long.^2));
+full_rhs_all = G'*(y_all./(sig_obs_long.^2));
 
 L_prinv=inv(L_pr); 
  
@@ -12,6 +19,7 @@ R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
 R_pos_true=inv(R_posinv);
 Gpos_true=R_pos_true*R_pos_true';
 mupos_true = R_posinv\(R_posinv'\full_rhs);
+mupos_true_all = R_posinv\(R_posinv'\full_rhs_all);
 
 %% compute posterior approximations and errors
 r_vals = 1:30;
@@ -45,6 +53,7 @@ C_BTQ    = C*Tr;
 %% compute posterior approximations
 f_dist = zeros(length(r_vals),4);
 [mu_LRU, mu_LR, mu_BTQ, mu_BTH] = deal(zeros(d,length(r_vals)));
+mu_errs = zeros(length(r_vals),4);
 for rr = 1:length(r_vals)
     r = r_vals(rr);
     
@@ -57,8 +66,13 @@ for rr = 1:length(r_vals)
     
     % Spantini approx posterior means
     Pi_r = What(:,1:r)*Wtilde(:,1:r)';
-    mu_LRU(:,rr) = Gpos_sp*full_rhs;
-    mu_LR(:,rr)  = Gpos_sp*Pi_r'*full_rhs;
+    temp = Gpos_sp*Pi_r'*full_rhs_all;
+    temp = R_pos_true\(temp - mupos_true_all);
+    mu_errs(rr,1) = mean(sqrt(sum(temp.^2)));
+    
+    temp = Gpos_sp*full_rhs_all;
+    temp = R_pos_true\(temp-mupos_true_all);
+    mu_errs(rr,2) = mean(sqrt(sum(temp.^2)));
     
     % Balancing with Q_infty - generate G_BT,H_BT
     G_BTQ = zeros(n*d_out,r);
@@ -79,7 +93,10 @@ for rr = 1:length(r_vals)
     Gpos_BTQ=R_pos_BTQ*R_pos_BTQ';
     
     f_dist(rr,2) = forstner(R_pos_BTQ,R_pos_true,'sqrt');
-    mu_BTQ(:,rr) = Gpos_BTQ*G_BTQ'*(y./(sig_obs_long.^2));
+    temp = Gpos_BTQ*G_BTQ'*(y_all./(sig_obs_long.^2));
+    temp = R_pos_true\(temp - mupos_true_all);
+    mu_errs(rr,3) = mean(sqrt(sum(temp.^2)));
+
     
     % Balancing with H - generate G_BT, H_BT
     G_BTH = zeros(n*d_out,r);
@@ -100,7 +117,9 @@ for rr = 1:length(r_vals)
     Gpos_BTH=R_pos_BTH*R_pos_BTH';
        
     f_dist(rr,3) = forstner(R_pos_BTH,R_pos_true,'sqrt');
-    mu_BTH(:,rr) = Gpos_BTH*G_BTH'*(y./(sig_obs_long.^2));
+    temp = Gpos_BTH*G_BTH'*(y_all./(sig_obs_long.^2));
+    temp = R_pos_true\(temp - mupos_true_all);
+    mu_errs(rr,4) = mean(sqrt(sum(temp.^2)));
 end
 
 %% plots
@@ -119,63 +138,30 @@ semilogy(r_vals,f_dist(:,3),'x')
 legend({'OLRU','BT-Q','BT-H'},...
     'interpreter','latex','fontsize',18,'location','best')
 legend boxoff
-grid on
 xlim([0 50])
+grid on
 xlabel('$r$','interpreter','latex','fontsize',18)
 title(['F\"orstner posterior covariance error'],'interpreter','latex','fontsize',20)
 set(gca,'fontsize',16,'ticklabelinterpreter','latex')
 savePDF(['paper/',model,'_cov2'],[4.5 4],[0 0])
 
-%% plot posterior mean errors
-err_LRU = mu_LRU - mupos_true;
-err_LR = mu_LR - mupos_true;
-err_BT = mu_BTQ - mupos_true;
-err_BT2 = mu_BTH - mupos_true;
-
-figure(12); clf
-semilogy(r_vals,sqrt(sum(err_LR.^2))/norm(mupos_true)); hold on
-semilogy(r_vals,sqrt(sum(err_LRU.^2))/norm(mupos_true),'Color',[0.4940    0.1840    0.5560])
-semilogy(r_vals,sqrt(sum(err_BT.^2))/norm(mupos_true),'o','Color',getColor(2))
-semilogy(r_vals,sqrt(sum(err_BT2.^2))/norm(mupos_true),'x','Color',getColor(3))
-ylim([1e-4 1e0])
-xlim([0 50])
-xlabel('$r$','interpreter','latex','fontsize',18)
-legend({'OLR','OLRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
-    'location','southwest')
-title(['Relative $\ell^2$ posterior mean error'],'interpreter','latex','fontsize',20)
-grid on
-legend boxoff
-set(gca,'fontsize',16,'ticklabelinterpreter','latex')
-savePDF(['paper/',model,'_mean2'],[4.5 4],[0 0])
-
-%% plot Gpos^-1 norm
-poserr_LR = R_pos_true\err_LR;
-poserr_LRU = R_pos_true\err_LRU;
-poserr_BT = R_pos_true\err_BT;
-poserr_BT2 = R_pos_true\err_BT2;
-
-posnorm = zeros(rmax,4);
-posnorm(:,1) = sqrt(sum(poserr_LR.^2));
-posnorm(:,2) = sqrt(sum(poserr_LRU.^2));
-posnorm(:,3) = sqrt(sum(poserr_BT.^2));
-posnorm(:,4) = sqrt(sum(poserr_BT2.^2));
-posnormref = norm(R_pos_true\mupos_true);
-
+%% plot posterior mean errors in Gpos^-1 norm
+posnormref = mean(sqrt(sum((R_pos_true\mupos_true_all).^2)));
 figure(121); clf
-semilogy(r_vals,posnorm(:,1)/posnormref); hold on
-semilogy(r_vals,posnorm(:,2)/posnormref,'Color',[0.4940    0.1840    0.5560]); 
-semilogy(r_vals,posnorm(:,3)/posnormref,'o','Color',getColor(2))
-semilogy(r_vals,posnorm(:,4)/posnormref,'x','Color',getColor(3))
+semilogy(r_vals,mu_errs(:,1)/posnormref); hold on
+semilogy(r_vals,mu_errs(:,2)/posnormref,'Color',[0.4940    0.1840    0.5560]); 
+semilogy(r_vals,mu_errs(:,3)/posnormref,'o','Color',getColor(2))
+semilogy(r_vals,mu_errs(:,4)/posnormref,'x','Color',getColor(3))
 xlabel('$r$','interpreter','latex','fontsize',18)
 legend({'OLR','OLRU','BT-Q','BT-H'},'interpreter','latex','fontsize',18,...
-    'location','northeast')
-title(['Relative $\Gamma_{\rm pos}^{-1}$-norm posterior mean error'],'interpreter','latex','fontsize',20)
+    'location','southeast')
+title(['Posterior mean: normalized Bayes risk'],'interpreter','latex','fontsize',20)
 legend boxoff
-ylim([1e-4 1e0])
-xlim([0 50])
 grid on
+ylim([1e-8 1e2])
+xlim([0 50])
 set(gca,'fontsize',16,'ticklabelinterpreter','latex')
-savePDF(['paper/',model,'_posnormmean2'],[4.5 4],[0 0])
+savePDF(['paper/',model,'_bayesmean2'],[4.5 4],[0 0])
 %% plot HSVs
 figure(13); clf
 semilogy(r_vals,delQ/delQ(1),'o','Color',[0.8500    0.3250    0.0980]); hold on
