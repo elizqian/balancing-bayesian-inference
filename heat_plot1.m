@@ -9,8 +9,7 @@ y_all  = G*x0_all;
 m_all  = y_all + sig_obs_long.*randn(n*d_out,num_reps);
 
 %% compute true posterior
-full_rhs    = G'*(y./(sig_obs_long.^2));
-full_rhs_all = G'*(y_all./(sig_obs_long.^2));
+full_rhs_all = G'*(m_all./(sig_obs_long.^2));
 
 L_prinv=inv(L_pr); 
  
@@ -18,7 +17,6 @@ R_posinv=qr([Go; L_prinv],0);
 R_posinv=triu(R_posinv(1:d,:)); % Pull out upper triangular factor
 R_pos_true=inv(R_posinv);
 Gpos_true=R_pos_true*R_pos_true';
-mupos_true = R_posinv\(R_posinv'\full_rhs);
 mupos_true_all = R_posinv\(R_posinv'\full_rhs_all);
 
 %% compute posterior approximations and errors
@@ -93,7 +91,7 @@ for rr = 1:length(r_vals)
     Gpos_BTQ=R_pos_BTQ*R_pos_BTQ';
     
     f_dist(rr,2) = forstner(R_pos_BTQ,R_pos_true,'sqrt');
-    temp = Gpos_BTQ*G_BTQ'*(y_all./(sig_obs_long.^2));
+    temp = Gpos_BTQ*G_BTQ'*(m_all./(sig_obs_long.^2));
     temp = R_pos_true\(temp - mupos_true_all);
     mu_errs(rr,3) = mean(sqrt(sum(temp.^2)));
 
@@ -117,7 +115,7 @@ for rr = 1:length(r_vals)
     Gpos_BTH=R_pos_BTH*R_pos_BTH';
        
     f_dist(rr,3) = forstner(R_pos_BTH,R_pos_true,'sqrt');
-    temp = Gpos_BTH*G_BTH'*(y_all./(sig_obs_long.^2));
+    temp = Gpos_BTH*G_BTH'*(m_all./(sig_obs_long.^2));
     temp = R_pos_true\(temp - mupos_true_all);
     mu_errs(rr,4) = mean(sqrt(sum(temp.^2)));
 end
