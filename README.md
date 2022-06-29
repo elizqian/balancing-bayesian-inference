@@ -23,6 +23,11 @@ To generate the plots from the paper, run the *_plot{1,2}.m scripts, correspondi
 * iss_plot1.m: The ISS example with 3000 measurements spaced 0.1 seconds apart (Figure 5.3)
 * iss_plot2.m: The ISS example with 10 measurements spaced 1 second apart (Figure 5.4)
 
----
 ## References
 2. Spantini, A., Solonen, A., Cui, T., Martin, J., Tenorio, L., and Marzouk, Y. "[Optimal low-rank approximations of Bayesian linear inverse problems](https://epubs.siam.org/doi/pdf/10.1137/140977308?casa_token=CaYk5XimLkoAAAAA:-WjPu7U7kT8q3WZU66efl5X6GPylJOcnJM7XuOyy-I00LLa0vo9478Tv4BeNFoO67EwOsvl78Q)." SIAM Journal on Scientific Computing 37, no. 6 (2015): A2451-A2487.
+
+### Contact
+Please feel free to contact [Elizabeth Qian](http://www.elizabethqian.com/) with any questions about this repository or the associated paper.
+
+### Acknowledgments
+Thanks to Josie König for pointing out a bug.
