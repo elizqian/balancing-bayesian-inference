@@ -1,6 +1,6 @@
 # Balanced truncation for Bayesian inference
 
-This repository contains code for the numerical results of the following preprint:
+This repository contains code for the numerical results of the following paper:
 
 1. Qian, E., Tabeart, J. M., Beattie, C., Gugercin, S., Jiang, J., Kramer, P. R., and Narayan, A.
 [Model reduction for linear dynamical systems via balancing for Bayesian inference.](https://link.springer.com/article/10.1007/s10915-022-01798-8) [arXiv](https://arxiv.org/abs/2111.13246)
