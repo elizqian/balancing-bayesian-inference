@@ -3,14 +3,16 @@
 This repository contains code for the numerical results of the following preprint:
 
 1. Qian, E., Tabeart, J. M., Beattie, C., Gugercin, S., Jiang, J., Kramer, P. R., and Narayan, A.
-[Model reduction for linear dynamical systems via balancing for Bayesian inference.](https://arxiv.org/abs/2111.13246)
-To appear, Journal of Scientific Computing, 2022.<details><summary>BibTeX</summary><pre>
+[Model reduction for linear dynamical systems via balancing for Bayesian inference.](https://link.springer.com/article/10.1007/s10915-022-01798-8) [arXiv](https://arxiv.org/abs/2111.13246)
+ Journal of Scientific Computing 91:29, 2022.<details><summary>BibTeX</summary><pre>
 @article{Qian2021Balancing,
     title   = {Model reduction for linear dynamical systems via balancing for Bayesian inference},
     author  = {Qian, E. and Tabeart, J. M. and Beattie, C. and Gugercin, S. and Jiang, J. and Kramer, P. R. and Narayan, A.},
-    journal = {arXiv:2111.13246},
-    url     = {https://arxiv.org/abs/2111.13246},
+    journal = {Journal of Scientific Computing},
+    url     = {https://link.springer.com/article/10.1007/s10915-022-01798-8},
     year    = {2022},
+    volume  = 91,
+    issue   = 29
 }</pre></details>
 
 ## Summary
