@@ -16,7 +16,7 @@ This repository contains code for the numerical results of the following paper:
 }</pre></details>
 
 ## Summary
-The work in [1] considers a Bayesian approach to the task of inferring the unknown initial state of a linear dynamical system based on noisy linear measurements taken after the initial time. The initial state is endowed with a Gaussian prior and measurement noise is also assumed to be Gaussian, so that the Bayesian posterior is also Gaussian. We define a <b>balanced truncation for Bayesian inference</b> model reduction approach and show that the resulting reduced models inherit stability and error guarantees from the system-theoretic setting, and in some settings yield an optimal posterior covariance approximation as defined in [2].
+The work in [1] considers a Bayesian approach to the task of inferring the unknown initial state of a linear dynamical system based on noisy linear measurements taken after the initial time. The initial state is endowed with a Gaussian prior and measurement noise is also assumed to be Gaussian, so that the Bayesian posterior is also Gaussian. We define a <b>balanced truncation for Bayesian inference</b> model reduction approach and show that the resulting reduced models inherit stability and error guarantees from the system-theoretic setting, and in some settings yield an optimal posterior covariance approximation as defined in [2]. See [3] for a generalization of the present method to new settings.
 
 ## Examples
 To generate the plots from the paper, run the *_plot{1,2}.m scripts, corresponding to:
@@ -25,8 +25,10 @@ To generate the plots from the paper, run the *_plot{1,2}.m scripts, correspondi
 * iss_plot1.m: The ISS example with 3000 measurements spaced 0.1 seconds apart (Figure 5.3)
 * iss_plot2.m: The ISS example with 10 measurements spaced 1 second apart (Figure 5.4)
 
-## References
+## See also
 2. Spantini, A., Solonen, A., Cui, T., Martin, J., Tenorio, L., and Marzouk, Y. "[Optimal low-rank approximations of Bayesian linear inverse problems](https://epubs.siam.org/doi/pdf/10.1137/140977308?casa_token=CaYk5XimLkoAAAAA:-WjPu7U7kT8q3WZU66efl5X6GPylJOcnJM7XuOyy-I00LLa0vo9478Tv4BeNFoO67EwOsvl78Q)." SIAM Journal on Scientific Computing 37, no. 6 (2015): A2451-A2487.
+
+3. König, J. and Freitag, M. "Time-limited balanced truncation for data assimilation problems." arXiv preprint, 2022. [arXiv:2212.07719](https://arxiv.org/pdf/2212.07719.pdf). [Related GitHub repo](https://github.com/joskoUP/TLBTforDA)
 
 ### Contact
 Please feel free to contact [Elizabeth Qian](http://www.elizabethqian.com/) with any questions about this repository or the associated paper.
